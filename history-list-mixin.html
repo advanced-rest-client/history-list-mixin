@@ -492,7 +492,7 @@ the License.
       query(query) {
         if (!query) {
           if (this.isSearch) {
-            this.reset();
+            this.refresh();
           }
           return Promise.resolve();
         }
