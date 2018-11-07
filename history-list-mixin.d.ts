@@ -233,5 +233,14 @@ declare namespace ArcComponents {
      * @returns Resolved promise when the query ends.
      */
     query(query: String|null): Promise<any>|null;
+
+    /**
+     * Dispatches `request-query` custom event.
+     * This event is handled by `request-mode` element to query the
+     * datastore for user search term.
+     *
+     * @param q Query passed to event detail.
+     */
+    _dispatchQueryEvent(q: String|null): CustomEvent|null;
   }
 }

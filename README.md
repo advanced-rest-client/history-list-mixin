@@ -13,3 +13,7 @@ A mixin to be applied to a list that renders history requests.
 ### API components
 
 This components is a part of [API components ecosystem](https://elements.advancedrestclient.com/)
+
+### Testing
+
+Install `istanbul` and `wct-istanbub` globally to run tests. See `.travis.yml` for more details.
