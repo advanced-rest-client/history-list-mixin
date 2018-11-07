@@ -9,13 +9,13 @@
     "The Advanced REST client authors <arc@mulesoft.com>"
   ],
   "devDependencies": {
-    "@polymer/gen-typescript-declarations": "^1.1.1"
+    "@polymer/gen-typescript-declarations": "^1.5.1"
   },
   "private": false,
   "scripts": {
     "lint": "polymer lint history-list-mixin.html",
-    "test-sauce": "polymer test --plugin sauce --job-name \"history-list-mixin:local-test\"",
-    "test": "polymer test --plugin local",
+    "test-sauce": "wct --plugin sauce --job-name \"history-list-mixin:local-test\"",
+    "test": "wct --plugin local",
     "update-types": "gen-typescript-declarations --deleteExisting --outDir ."
   },
   "repository": {

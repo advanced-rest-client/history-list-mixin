@@ -8,6 +8,7 @@
   <script src="../../web-component-tester/browser.js"></script>
   <link rel="import" href="../../app-pouchdb/pouchdb.html">
   <link rel="import" href="../../arc-models/request-model.html">
+  <link rel="import" href="../../arc-models/url-indexer.html">
   <link rel="import" href="../../arc-data-generator/arc-data-generator.html">
   <link rel="import" href="test-element.html">
 </head>
@@ -27,7 +28,22 @@
     </template>
   </test-fixture>
 
+  <test-fixture id="NoModel">
+    <template>
+      <test-element no-auto page-limit="10"></test-element>
+    </template>
+  </test-fixture>
+
+  <test-fixture id="WithIndexer">
+    <template>
+      <request-model></request-model>
+      <url-indexer></url-indexer>
+      <test-element no-auto></test-element>
+    </template>
+  </test-fixture>
+
   <script>
+  /* global DataGenerator */
   suite('history-list-mixin', () => {
     suite('queryOptions computations', () => {
       test('Sets default query limit', () => {
@@ -183,7 +199,7 @@
       });
     });
 
-    suite('_dataImportHandler()', () => {
+    suite('_onDatabaseDestroy()', () => {
       let element;
       setup(() => {
         element = fixture('Basic')[1];
@@ -192,7 +208,7 @@
       test('Calls refresh() when called with "history" datastore', () => {
         let called = false;
         element.refresh = () => called = true;
-        element._dataImportHandler({
+        element._onDatabaseDestroy({
           detail: {
             datastore: ['history']
           }
@@ -203,7 +219,7 @@
       test('Calls refresh() when called with "history-requests" datastore (legacy api)', () => {
         let called = false;
         element.refresh = () => called = true;
-        element._dataImportHandler({
+        element._onDatabaseDestroy({
           detail: {
             datastore: ['history-requests']
           }
@@ -214,7 +230,7 @@
       test('Calls refresh() when called with "all" datastore', () => {
         let called = false;
         element.refresh = () => called = true;
-        element._dataImportHandler({
+        element._onDatabaseDestroy({
           detail: {
             datastore: ['history-requests']
           }
@@ -225,7 +241,7 @@
       test('Calls refresh() when datastore is a string', () => {
         let called = false;
         element.refresh = () => called = true;
-        element._dataImportHandler({
+        element._onDatabaseDestroy({
           detail: {
             datastore: 'history-requests'
           }
@@ -243,6 +259,37 @@
           }
         }));
         assert.isTrue(called);
+      });
+
+      test('Do nothing when datastore not set', () => {
+        let called = false;
+        element.refresh = () => called = true;
+        element._onDatabaseDestroy({
+          detail: {}
+        });
+        assert.isFalse(called);
+      });
+
+      test('Do nothing when datastore is not an array', () => {
+        let called = false;
+        element.refresh = () => called = true;
+        element._onDatabaseDestroy({
+          detail: {
+            datastore: true
+          }
+        });
+        assert.isFalse(called);
+      });
+
+      test('Do nothing when datastore is history store', () => {
+        let called = false;
+        element.refresh = () => called = true;
+        element._onDatabaseDestroy({
+          detail: {
+            datastore: 'saved'
+          }
+        });
+        assert.isFalse(called);
       });
     });
 
@@ -371,6 +418,39 @@
         assert.equal(data[1]._id, '3');
         assert.equal(data[2]._id, '2');
       });
+
+      test('Returns 0 when times equal', () => {
+        const a = {
+          updated: 1
+        };
+        const b = {
+          updated: 1
+        };
+        const result = element._sortHistoryResults(a, b);
+        assert.equal(result, 0);
+      });
+
+      test('Returns -1 when A time is higher', () => {
+        const a = {
+          updated: 1
+        };
+        const b = {
+          updated: 0
+        };
+        const result = element._sortHistoryResults(a, b);
+        assert.equal(result, -1);
+      });
+
+      test('Returns 1 when B time is higher', () => {
+        const a = {
+          updated: 0
+        };
+        const b = {
+          updated: 1
+        };
+        const result = element._sortHistoryResults(a, b);
+        assert.equal(result, 1);
+      });
     });
 
     suite('_getTodayTimestamp()', () => {
@@ -438,6 +518,548 @@
         element._appendItems(requests);
         assert.typeOf(element.requests, 'array');
         assert.lengthOf(element.requests, 3);
+      });
+    });
+
+    function cancelRequestListEvent(element, requests) {
+      if (!requests) {
+        requests = [];
+      }
+      element.addEventListener('request-list', function f(e) {
+        element.removeEventListener('request-list', f);
+        e.preventDefault();
+        e.detail.result = Promise.resolve({
+          rows: requests
+        });
+      });
+    }
+
+    suite('refresh()', () => {
+      let element;
+      setup(function() {
+        element = fixture('NoModel');
+      });
+
+      test('Calles reset() function', () => {
+        let called = false;
+        element.reset = () => called = true;
+        element.loadNext = () => {};
+        element.refresh();
+        assert.isTrue(called);
+      });
+
+      test('Calles loadNext() function', () => {
+        let called = false;
+        element.reset = () => {};
+        element.loadNext = () => called = true;
+        element.refresh();
+        assert.isTrue(called);
+      });
+    });
+
+    suite('reset()', () => {
+      let element;
+      setup(function() {
+        element = fixture('Basic')[1];
+      });
+
+      test('Resets _queryStartKey', () => {
+        element._queryStartKey = 'test';
+        element.reset();
+        assert.isUndefined(element._queryStartKey);
+      });
+
+      test('Resets _querySkip', () => {
+        element._querySkip = 1;
+        element.reset();
+        assert.isUndefined(element._querySkip);
+      });
+
+      test('Resets requests', () => {
+        element.requests = [{}];
+        element.reset();
+        assert.isUndefined(element.requests);
+      });
+
+      test('Resets isSearch', () => {
+        element.isSearch = true;
+        element.reset();
+        assert.isFalse(element.isSearch);
+      });
+
+      test('Resets querying', () => {
+        element._setQuerying(true);
+        element.reset();
+        assert.isFalse(element.querying);
+      });
+    });
+
+    suite('loadNext()', () => {
+      let element;
+      setup(function() {
+        element = fixture('Basic')[1];
+      });
+
+      test('Eventually calls _loadPage()', (done) => {
+        let called = false;
+        element._loadPage = () => called = true;
+        element.loadNext();
+        Polymer.RenderStatus.afterNextRender(this, () => {
+          assert.isTrue(called);
+          done();
+        });
+      });
+
+      test('Sets __makingQuery flag', (done) => {
+        element._loadPage = () => done();
+        element.loadNext();
+        assert.isTrue(element.__makingQuery);
+      });
+
+      test('Clears __makingQuery flag after callback', (done) => {
+        element._loadPage = () => {
+          assert.isFalse(element.__makingQuery);
+          done();
+        };
+        element.loadNext();
+      });
+
+      test('Do nothing when __makingQuery flag is set', (done) => {
+        let called = false;
+        element._loadPage = () => called = true;
+        element.__makingQuery = true;
+        element.loadNext();
+        Polymer.RenderStatus.afterNextRender(this, () => {
+          assert.isFalse(called);
+          done();
+        });
+      });
+
+      test('Do nothing when isSearch flag is set', (done) => {
+        let called = false;
+        element._loadPage = () => called = true;
+        element.isSearch = true;
+        element.loadNext();
+        Polymer.RenderStatus.afterNextRender(this, () => {
+          assert.isFalse(called);
+          done();
+        });
+      });
+    });
+
+    suite('_dispatchListEvent()', () => {
+      let element;
+      setup(function() {
+        element = fixture('Basic')[1];
+      });
+
+      test('Dispatches "request-list" custom event', () => {
+        let called = false;
+        element.addEventListener('request-list', function f(e) {
+          element.removeEventListener('request-list', f);
+          e.preventDefault();
+          called = true;
+        });
+        element._dispatchListEvent();
+        assert.isTrue(called);
+      });
+
+      test('Returns custom event', () => {
+        cancelRequestListEvent(element);
+        const result = element._dispatchListEvent();
+        assert.typeOf(result, 'customevent');
+      });
+
+      test('Custom event has detail object', () => {
+        cancelRequestListEvent(element);
+        const result = element._dispatchListEvent();
+        assert.typeOf(result.detail, 'object');
+      });
+
+      test('Detail contains type', () => {
+        cancelRequestListEvent(element);
+        const result = element._dispatchListEvent();
+        assert.equal(result.detail.type, 'history');
+      });
+
+      test('Detail contains queryOptions', () => {
+        cancelRequestListEvent(element);
+        const result = element._dispatchListEvent();
+        assert.typeOf(result.detail.queryOptions, 'object');
+      });
+    });
+
+    suite('_loadPage()', () => {
+      suiteSetup(() => {
+        return DataGenerator.insertHistoryRequestData();
+      });
+
+      suiteTeardown(() => {
+        return DataGenerator.destroyHistoryData();
+      });
+
+      test('Does nothing when isSearch is set', () => {
+        const element = fixture('Basic')[1];
+        element.isSearch = true;
+        const p = element._loadPage();
+        assert.isUndefined(element.querying);
+        return p;
+      });
+
+      test('Returns promise', () => {
+        const element = fixture('Basic')[1];
+        element.isSearch = true;
+        const p = element._loadPage();
+        assert.typeOf(p.then, 'function');
+        return p;
+      });
+
+      test('Dispatches "request-list" custom event', () => {
+        const element = fixture('Basic')[1];
+        let called = false;
+        element.addEventListener('request-list', function f(e) {
+          element.removeEventListener('request-list', f);
+          e.preventDefault();
+          called = true;
+          e.detail.result = Promise.resolve({
+            rows: []
+          });
+        });
+        const p = element._loadPage();
+        assert.isTrue(called);
+        return p;
+      });
+
+      test('Rejects when event is not handled', (done) => {
+        const element = fixture('NoModel');
+        let called = false;
+        element._loadPage()
+        .then(() => {
+          done(new Error('Not rejected promise'));
+          called = true;
+        })
+        .catch(() => {
+          if (!called) {
+            done();
+          }
+        });
+      });
+
+      test('Sets querying property', () => {
+        const element = fixture('NoModel');
+        cancelRequestListEvent(element);
+        const p = element._loadPage();
+        assert.isTrue(element.querying);
+        return p;
+      });
+
+      test('Resets querying when ready', () => {
+        const element = fixture('NoModel');
+        cancelRequestListEvent(element);
+        const p = element._loadPage();
+        return p.then(() => {
+          assert.isFalse(element.querying);
+        });
+      });
+
+      test('Resets querying when error', (done) => {
+        const element = fixture('NoModel');
+        element.addEventListener('request-list', function f(e) {
+          element.removeEventListener('request-list', f);
+          e.preventDefault();
+          e.detail.result = Promise.reject(new Error('test'));
+        });
+        let called = false;
+        element._loadPage().then(() => {
+          called = true;
+          done(new Error('Should not succeed'));
+        })
+        .catch(() => {
+          if (!called) {
+            done();
+          }
+        });
+      });
+
+      test('Sets requests from the response', () => {
+        const element = fixture('Basic')[1];
+        return element._loadPage()
+        .then(() => {
+          assert.typeOf(element.requests, 'array');
+          assert.lengthOf(element.requests, 25);
+        });
+      });
+
+      test('Sets _queryStartKey', () => {
+        const element = fixture('Basic')[1];
+        return element._loadPage()
+        .then(() => {
+          assert.typeOf(element._queryStartKey, 'string');
+        });
+      });
+
+      test('Sets _querySkip', () => {
+        const element = fixture('Basic')[1];
+        return element._loadPage()
+        .then(() => {
+          assert.equal(element._querySkip, 1);
+        });
+      });
+
+      test('Calls _processHistoryResults() for documents', () => {
+        let called = false;
+        const element = fixture('Basic')[1];
+        element._processHistoryResults = () => called = true;
+        return element._loadPage()
+        .then(() => {
+          assert.isTrue(called);
+        });
+      });
+
+      test('Calls notifyResize when defined', (done) => {
+        let called = false;
+        const element = fixture('Basic')[1];
+        element.notifyResize = () => called = true;
+        element._loadPage()
+        .then(() => {
+          Polymer.RenderStatus.afterNextRender(this, () => {
+            assert.isTrue(called);
+            done();
+          });
+        });
+      });
+    });
+
+    suite('_handleError()', () => {
+      let element;
+      setup(function() {
+        element = fixture('NoModel');
+      });
+
+      test('Throws an error', () => {
+        assert.throws(function() {
+          element._handleError(new Error('test'));
+        });
+      });
+    });
+
+    suite('_computeHistoryTime()', () => {
+      let element;
+      setup(function() {
+        element = fixture('NoModel');
+      });
+
+      test('Returns undefined when no argument', () => {
+        const result = element._computeHistoryTime();
+        assert.isUndefined(result);
+      });
+
+      test('Returns undefined when argument is not parsable date', () => {
+        const result = element._computeHistoryTime('test');
+        assert.isUndefined(result);
+      });
+
+      test('Returns an object', () => {
+        const result = element._computeHistoryTime(Date.now());
+        assert.typeOf(result, 'object');
+      });
+
+      test('Has formatted date', () => {
+        const result = element._computeHistoryTime(Date.now());
+        assert.typeOf(result.formatted, 'string');
+      });
+
+      test('Has time at midnight', () => {
+        const result = element._computeHistoryTime(Date.now());
+        assert.typeOf(result.time, 'number', 'Is a number');
+        const secs = String(result.time).substr(-5);
+        assert.equal(secs, '00000', 'time is removed');
+      });
+
+      test('Has timeLabel date', () => {
+        const result = element._computeHistoryTime(Date.now());
+        assert.typeOf(result.timeLabel, 'string');
+      });
+    });
+
+    suite('_resetHistoryObject()', () => {
+      let element;
+      setup(function() {
+        element = fixture('NoModel');
+      });
+
+      test('Returns the same passed object', () => {
+        const obj = {};
+        const result = element._resetHistoryObject(obj);
+        assert.isTrue(result === obj);
+      });
+
+      test('Sets type', () => {
+        const result = element._resetHistoryObject({});
+        assert.equal(result.type, 'history');
+      });
+
+      test('Removes "header"', () => {
+        const result = element._resetHistoryObject({header: 'test'});
+        assert.isUndefined(result.header);
+      });
+
+      test('Removes "hasHeader"', () => {
+        const result = element._resetHistoryObject({hasHeader: 'test'});
+        assert.isUndefined(result.hasHeader);
+      });
+
+      test('Removes "timeLabel"', () => {
+        const result = element._resetHistoryObject({timeLabel: 'test'});
+        assert.isUndefined(result.timeLabel);
+      });
+
+      test('Removes "today"', () => {
+        const result = element._resetHistoryObject({today: 'test'});
+        assert.isUndefined(result.today);
+      });
+    });
+
+    function cancelRequestQueryEvent(element, requests) {
+      if (!requests) {
+        requests = [];
+      }
+      element.addEventListener('request-query', function f(e) {
+        element.removeEventListener('request-query', f);
+        e.preventDefault();
+        e.detail.result = Promise.resolve({
+          rows: requests
+        });
+      });
+    }
+
+    suite('_dispatchQueryEvent()', () => {
+      let element;
+      setup(function() {
+        element = fixture('NoModel');
+      });
+
+      test('Dispatches "request-query" custom event', () => {
+        let called = false;
+        element.addEventListener('request-query', function f(e) {
+          element.removeEventListener('request-query', f);
+          e.preventDefault();
+          called = true;
+        });
+        element._dispatchQueryEvent();
+        assert.isTrue(called);
+      });
+
+      test('Returns custom event', () => {
+        cancelRequestQueryEvent(element);
+        const result = element._dispatchQueryEvent();
+        assert.typeOf(result, 'customevent');
+      });
+
+      test('Custom event has detail object', () => {
+        cancelRequestQueryEvent(element);
+        const result = element._dispatchQueryEvent();
+        assert.typeOf(result.detail, 'object');
+      });
+
+      test('Detail contains "type"', () => {
+        cancelRequestQueryEvent(element);
+        const result = element._dispatchQueryEvent();
+        assert.equal(result.detail.type, 'history');
+      });
+
+      test('Detail contains "q"', () => {
+        cancelRequestQueryEvent(element);
+        const result = element._dispatchQueryEvent('test');
+        assert.equal(result.detail.q, 'test');
+      });
+    });
+
+    suite('query()', () => {
+      suiteSetup(() => {
+        return DataGenerator.insertHistoryRequestData();
+      });
+
+      suiteTeardown(() => {
+        return DataGenerator.destroyHistoryData();
+      });
+
+      test('Does nothing when query is not set', () => {
+        const element = fixture('Basic')[1];
+        const p = element.query();
+        assert.isUndefined(element.querying);
+        return p;
+      });
+
+      test('Returns a promise when query is not set', () => {
+        const element = fixture('Basic')[1];
+        const p = element.query();
+        assert.typeOf(p.then, 'function');
+        return p;
+      });
+
+      test('Returns promise when query is not set and isSearch', () => {
+        const element = fixture('Basic')[1];
+        element.isSearch = true;
+        const p = element.query();
+        assert.typeOf(p.then, 'function');
+        return p;
+      });
+
+      test('Calls refresh() when query is not set and isSearch', () => {
+        const element = fixture('Basic')[1];
+        element.isSearch = true;
+        let called = false;
+        element.refresh = () => called = true;
+        const p = element.query();
+        assert.isTrue(called);
+        return p;
+      });
+
+      test('Dispatches "request-query" custom event', () => {
+        const element = fixture('Basic')[1];
+        let called = false;
+        element.addEventListener('request-query', function f(e) {
+          element.removeEventListener('request-query', f);
+          e.preventDefault();
+          called = true;
+          e.detail.result = Promise.resolve([]);
+        });
+        const p = element.query('test');
+        assert.isTrue(called);
+        return p;
+      });
+
+      test('Rejects when event is not handled', (done) => {
+        const element = fixture('NoModel');
+        let called = false;
+        element._loadPage()
+        .then(() => {
+          done(new Error('Not rejected promise'));
+          called = true;
+        })
+        .catch(() => {
+          if (!called) {
+            done();
+          }
+        });
+      });
+
+      test('Sets querying property', () => {
+        const element = fixture('NoModel');
+        cancelRequestQueryEvent(element);
+        const p = element.query('test');
+        assert.isTrue(element.querying);
+        return p;
+      });
+
+      test('Resets querying when ready', () => {
+        const element = fixture('NoModel');
+        cancelRequestQueryEvent(element);
+        const p = element.query('test');
+        return p.then(() => {
+          assert.isFalse(element.querying);
+        });
       });
     });
   });

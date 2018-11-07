@@ -267,12 +267,13 @@ the License.
        */
       _loadPage() {
         if (this.isSearch) {
-          return;
+          return Promise.resolve();
         }
         const e = this._dispatchListEvent();
         if (!e.defaultPrevented) {
-          this._handleError(new Error('Request model not found.'));
-          return;
+          let msg = 'Request model not found.';
+          console.warn(msg);
+          return Promise.reject(new Error(msg));
         }
         this._setQuerying(true);
         return e.detail.result
@@ -350,15 +351,11 @@ the License.
        */
       _ensureTimestamps(requests) {
         return requests.map((item) => {
-          if (!item.created) {
+          if (!item.created || isNaN(item.created)) {
             item.created = Date.now();
           }
           if (!item.updated || isNaN(item.updated)) {
-            if (item.created && !isNaN(item.created)) {
-              item.updated = item.created;
-            } else {
-              item.updated = Date.now();
-            }
+            item.updated = item.created;
           }
           return item;
         });
@@ -499,24 +496,16 @@ the License.
         this.isSearch = true;
         this._setQuerying(true);
         this.set('requests', undefined);
-        const e = new CustomEvent('request-query', {
-          cancelable: true,
-          bubbles: true,
-          composed: true,
-          detail: {
-            q: query,
-            type: 'history'
-          }
-        });
-        this.dispatchEvent(e);
 
+        const e = this._dispatchQueryEvent(query);
         if (!e.defaultPrevented) {
-          this._handleError(new Error('Model not found.'));
-          return;
+          const msg = 'Model not found.';
+          console.warn(msg);
+          return Promise.reject(new Error(msg));
         }
-
         return e.detail.result
         .then((result) => {
+          result = this._processHistoryResults(result);
           this._appendItems(result);
           this._setQuerying(false);
         })
@@ -524,6 +513,26 @@ the License.
           this._setQuerying(false);
           this._handleError(error);
         });
+      }
+      /**
+       * Dispatches `request-query` custom event.
+       * This event is handled by `request-mode` element to query the
+       * datastore for user search term.
+       * @param {String} q Query passed to event detail.
+       * @return {CustomEvent}
+       */
+      _dispatchQueryEvent(q) {
+        const e = new CustomEvent('request-query', {
+          cancelable: true,
+          bubbles: true,
+          composed: true,
+          detail: {
+            q,
+            type: 'history'
+          }
+        });
+        this.dispatchEvent(e);
+        return e;
       }
 
       /**
