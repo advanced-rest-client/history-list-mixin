@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+  <title>history-list-mixin test</title>
+  <script src="../../webcomponentsjs/webcomponents-loader.js"></script>
+  <script src="../../web-component-tester/browser.js"></script>
+  <link rel="import" href="../../app-pouchdb/pouchdb.html">
+  <link rel="import" href="../../arc-models/request-model.html">
+  <link rel="import" href="../../arc-data-generator/arc-data-generator.html">
+  <link rel="import" href="test-element.html">
+</head>
+<body>
+
+  <test-fixture id="Basic">
+    <template>
+      <request-model></request-model>
+      <test-element no-auto></test-element>
+    </template>
+  </test-fixture>
+
+  <test-fixture id="QueryLimit">
+    <template>
+      <request-model></request-model>
+      <test-element no-auto page-limit="10"></test-element>
+    </template>
+  </test-fixture>
+
+  <script>
+  suite('history-list-mixin', () => {
+    suite('queryOptions computations', () => {
+      test('Sets default query limit', () => {
+        const element = fixture('Basic')[1];
+        assert.typeOf(element.queryOptions, 'object', 'queryOptions is computed');
+        assert.equal(element.queryOptions.limit, 150);
+      });
+
+      test('Respects page-limit attribute', () => {
+        const element = fixture('QueryLimit')[1];
+        assert.equal(element.queryOptions.limit, 10);
+      });
+
+      test('Sets startkey property', () => {
+        const element = fixture('Basic')[1];
+        element._queryStartKey = 'test';
+        assert.equal(element.queryOptions.startkey, 'test');
+      });
+
+      test('Sets skip property', () => {
+        const element = fixture('Basic')[1];
+        element._querySkip = 1;
+        assert.equal(element.queryOptions.skip, 1);
+      });
+
+      test('Sets descending property', () => {
+        const element = fixture('Basic')[1];
+        assert.isTrue(element.queryOptions.descending);
+      });
+
+      test('Sets include_docs property', () => {
+        const element = fixture('Basic')[1];
+        assert.isTrue(element.queryOptions.include_docs);
+      });
+    });
+
+    suite('_computeQueryOptions()', () => {
+      let element;
+      suiteSetup(() => {
+        element = fixture('Basic')[1];
+      });
+
+      test('Sets descending property', () => {
+        const result = element._computeQueryOptions();
+        assert.isTrue(result.descending);
+      });
+
+      test('Sets include_docs property', () => {
+        const result = element._computeQueryOptions();
+        assert.isTrue(result.include_docs);
+      });
+
+      test('Sets limit', () => {
+        const result = element._computeQueryOptions(10);
+        assert.equal(result.limit, 10);
+      });
+
+      test('Sets startkey property', () => {
+        const result = element._computeQueryOptions(10, 'test');
+        assert.equal(result.startkey, 'test');
+      });
+
+      test('Sets skip property', () => {
+        const result = element._computeQueryOptions(10, 'test', 1);
+        assert.equal(result.skip, 1);
+      });
+    });
+
+    suite('_computeDataUnavailable()', () => {
+      let element;
+      suiteSetup(() => {
+        element = fixture('Basic')[1];
+      });
+
+      test('Returns true if all undefined', () => {
+        const result = element._computeDataUnavailable();
+        assert.isTrue(result);
+      });
+
+      test('Returns true if all false', () => {
+        const result = element._computeDataUnavailable(false, false, false);
+        assert.isTrue(result);
+      });
+
+      test('Returns false if hasRequests is true', () => {
+        const result = element._computeDataUnavailable(true, false, false);
+        assert.isFalse(result);
+      });
+
+      test('Returns false if loading is true', () => {
+        const result = element._computeDataUnavailable(false, true, false);
+        assert.isFalse(result);
+      });
+
+      test('Returns false if isSearch is true', () => {
+        const result = element._computeDataUnavailable(false, false, true);
+        assert.isFalse(result);
+      });
+    });
+
+    suite('_computeSearchListEmpty()', () => {
+      let element;
+      suiteSetup(() => {
+        element = fixture('Basic')[1];
+      });
+
+      test('Returns false if all undefined', () => {
+        const result = element._computeSearchListEmpty();
+        assert.isFalse(result);
+      });
+
+      test('Returns false if all false', () => {
+        const result = element._computeSearchListEmpty(false, false, false);
+        assert.isFalse(result);
+      });
+
+      test('Returns false if hasRequests is true', () => {
+        const result = element._computeSearchListEmpty(true, false, false);
+        assert.isFalse(result);
+      });
+
+      test('Returns false if loading is true', () => {
+        const result = element._computeSearchListEmpty(false, true, false);
+        assert.isFalse(result);
+      });
+
+      test('Returns true if isSearch is true', () => {
+        const result = element._computeSearchListEmpty(false, false, true);
+        assert.isTrue(result);
+      });
+    });
+
+    suite('_dataImportHandler()', () => {
+      let element;
+      setup(() => {
+        element = fixture('Basic')[1];
+      });
+
+      test('Calls refresh() when called', () => {
+        let called = false;
+        element.refresh = () => called = true;
+        element._dataImportHandler();
+        assert.isTrue(called);
+      });
+
+      test('Calls refresh() when data-imported is handled', () => {
+        let called = false;
+        element.refresh = () => called = true;
+        document.body.dispatchEvent(new CustomEvent('data-imported', {
+          bubbles: true
+        }));
+        assert.isTrue(called);
+      });
+    });
+
+    suite('_dataImportHandler()', () => {
+      let element;
+      setup(() => {
+        element = fixture('Basic')[1];
+      });
+
+      test('Calls refresh() when called with "history" datastore', () => {
+        let called = false;
+        element.refresh = () => called = true;
+        element._dataImportHandler({
+          detail: {
+            datastore: ['history']
+          }
+        });
+        assert.isTrue(called);
+      });
+
+      test('Calls refresh() when called with "history-requests" datastore (legacy api)', () => {
+        let called = false;
+        element.refresh = () => called = true;
+        element._dataImportHandler({
+          detail: {
+            datastore: ['history-requests']
+          }
+        });
+        assert.isTrue(called);
+      });
+
+      test('Calls refresh() when called with "all" datastore', () => {
+        let called = false;
+        element.refresh = () => called = true;
+        element._dataImportHandler({
+          detail: {
+            datastore: ['history-requests']
+          }
+        });
+        assert.isTrue(called);
+      });
+
+      test('Calls refresh() when datastore is a string', () => {
+        let called = false;
+        element.refresh = () => called = true;
+        element._dataImportHandler({
+          detail: {
+            datastore: 'history-requests'
+          }
+        });
+        assert.isTrue(called);
+      });
+
+      test('Calls refresh() when datastore-destroyed is handled', () => {
+        let called = false;
+        element.refresh = () => called = true;
+        document.body.dispatchEvent(new CustomEvent('datastore-destroyed', {
+          bubbles: true,
+          detail: {
+            datastore: ['history']
+          }
+        }));
+        assert.isTrue(called);
+      });
+    });
+
+    suite('_processHistoryResults()', function() {
+      let element;
+      let data;
+      setup(function() {
+        element = fixture('Basic')[1];
+        data = [{
+          _id: '1',
+          updated: 10
+        }, {
+          _id: '2',
+          updated: 20
+        }];
+      });
+
+      test('Do nothing if no response', function() {
+        const result = element._processHistoryResults();
+        assert.isUndefined(result);
+      });
+
+      test('Returns empty array when no response', function() {
+        const result = element._processHistoryResults([]);
+        assert.typeOf(result, 'array');
+        assert.lengthOf(result, 0);
+      });
+
+      test('Returns a list of documents', function() {
+        const result = element._processHistoryResults(data);
+        assert.typeOf(result, 'array');
+        assert.lengthOf(result, 2);
+      });
+
+      test('Documents are sorted by name', function() {
+        const result = element._processHistoryResults(data);
+        assert.equal(result[0]._id, '2');
+        assert.equal(result[1]._id, '1');
+      });
+
+      test('Adds created property when missing', () => {
+        const result = element._processHistoryResults(data);
+        assert.typeOf(result[0].created, 'number');
+      });
+
+      test('Adds updated property when missing', () => {
+        const result = element._processHistoryResults(data);
+        assert.typeOf(result[0].updated, 'number');
+      });
+
+      test('Adds timeLabel property', () => {
+        const result = element._processHistoryResults(data);
+        assert.typeOf(result[0].timeLabel, 'string');
+      });
+
+      test('Adds header property', () => {
+        const result = element._processHistoryResults(data);
+        assert.typeOf(result[0].header, 'string');
+      });
+
+      test('Adds hasHeader property', () => {
+        const result = element._processHistoryResults(data);
+        assert.typeOf(result[0].hasHeader, 'boolean');
+      });
+    });
+
+    suite('_ensureTimestamps()', () => {
+      let element;
+      let data;
+      setup(function() {
+        element = fixture('Basic')[1];
+        data = [{
+          _id: '1',
+          created: 1
+        }, {
+          _id: '2',
+          updated: 2
+        }, {
+          _id: '3'
+        }];
+      });
+
+      test('Returns array', () => {
+        const result = element._ensureTimestamps(data);
+        assert.typeOf(result, 'array');
+        assert.lengthOf(result, 3);
+      });
+
+      test('Adds "updated" property', () => {
+        const result = element._ensureTimestamps(data);
+        assert.typeOf(result[0].updated, 'number');
+      });
+
+      test('Adds "created" property', () => {
+        const result = element._ensureTimestamps(data);
+        assert.typeOf(result[1].created, 'number');
+      });
+
+      test('Adds both properties', () => {
+        const result = element._ensureTimestamps(data);
+        assert.typeOf(result[2].created, 'number');
+        assert.typeOf(result[2].updated, 'number');
+      });
+    });
+
+    suite('_sortHistoryResults()', () => {
+      let element;
+      let data;
+      setup(function() {
+        element = fixture('Basic')[1];
+        data = [{
+          _id: '1',
+          updated: 3
+        }, {
+          _id: '2',
+          updated: 1
+        }, {
+          _id: '3',
+          updated: 2
+        }];
+      });
+
+      test('Sorts the array', () => {
+        data.sort(element._sortHistoryResults);
+        assert.equal(data[0]._id, '1');
+        assert.equal(data[1]._id, '3');
+        assert.equal(data[2]._id, '2');
+      });
+    });
+
+    suite('_getTodayTimestamp()', () => {
+      let element;
+      setup(function() {
+        element = fixture('Basic')[1];
+      });
+
+      test('Returns a number', () => {
+        const result = element._getTodayTimestamp();
+        assert.typeOf(result, 'number');
+      });
+
+      test('Hours, minutes, seconds, and ms are removed ', () => {
+        const result = element._getTodayTimestamp();
+        const secs = String(result).substr(-5);
+        assert.equal(secs, '00000');
+      });
+    });
+
+    suite('_getYesterdayTimestamp()', () => {
+      let element;
+      setup(function() {
+        element = fixture('Basic')[1];
+      });
+
+      test('Returns a number', () => {
+        const result = element._getYesterdayTimestamp(Date.now());
+        assert.typeOf(result, 'number');
+      });
+
+      test('Is a day earlier', () => {
+        const result = element._getYesterdayTimestamp(1541658370548);
+        assert.equal(result, 1541571970548);
+      });
+    });
+
+    suite('_appendItems()', function() {
+      let element;
+      setup(function() {
+        element = fixture('Basic')[1];
+      });
+
+      test('Adds items to the list that doesn\'t exists', function() {
+        const items = [{
+          _id: 1
+        }, {
+          _id: 2
+        }];
+        assert.isUndefined(element.requests);
+        element._appendItems(items);
+        assert.typeOf(element.requests, 'array');
+        assert.lengthOf(element.requests, 2);
+      });
+
+      test('Adds items to the list that already exists', function() {
+        const requests = [{
+          _id: 1
+        }, {
+          _id: 2
+        }];
+        element.requests = [{
+          _id: 3
+        }];
+        element._appendItems(requests);
+        assert.typeOf(element.requests, 'array');
+        assert.lengthOf(element.requests, 3);
+      });
+    });
+  });
+  </script>
+</body>
+</html>

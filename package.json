@@ -1,0 +1,29 @@
+{
+  "name": "@advanced-rest-client/history-list-mixin",
+  "description": "A mixin to be applied to a list that renders history requests.",
+  "version": "2.0.0-preview",
+  "license": "Apache-2.0",
+  "main": "history-list-mixin.html",
+  "authors": [
+    "Pawel Psztyc",
+    "The Advanced REST client authors <arc@mulesoft.com>"
+  ],
+  "devDependencies": {
+    "@polymer/gen-typescript-declarations": "^1.1.1"
+  },
+  "private": false,
+  "scripts": {
+    "lint": "polymer lint history-list-mixin.html",
+    "test-sauce": "polymer test --plugin sauce --job-name \"history-list-mixin:local-test\"",
+    "test": "polymer test --plugin local",
+    "update-types": "gen-typescript-declarations --deleteExisting --outDir ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/advanced-rest-client/history-list-mixin.git"
+  },
+  "bugs": {
+    "url": "https://github.com/advanced-rest-client/history-list-mixin/issues",
+    "email": "arc@mulesoft.com"
+  }
+}
