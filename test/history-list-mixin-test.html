@@ -393,6 +393,17 @@
         assert.typeOf(result[2].created, 'number');
         assert.typeOf(result[2].updated, 'number');
       });
+
+      test('Returns the same values if present', function() {
+        const created = 123456789;
+        const updated = 987654321;
+        const result = element._ensureTimestamps([{
+          created,
+          updated
+        }]);
+        assert.equal(result[0].created, created);
+        assert.equal(result[0].updated, updated);
+      });
     });
 
     suite('_sortHistoryResults()', () => {
@@ -468,6 +479,30 @@
         const result = element._getTodayTimestamp();
         const secs = String(result).substr(-5);
         assert.equal(secs, '00000');
+      });
+
+      test('Hours is set to 0', () => {
+        const result = element._getTodayTimestamp();
+        const date = new Date(result);
+        assert.equal(date.getHours(), 0);
+      });
+
+      test('Minutes is set to 0', () => {
+        const result = element._getTodayTimestamp();
+        const date = new Date(result);
+        assert.equal(date.getMinutes(), 0);
+      });
+
+      test('Seconds is set to 0', () => {
+        const result = element._getTodayTimestamp();
+        const date = new Date(result);
+        assert.equal(date.getSeconds(), 0);
+      });
+
+      test('Milliseconds is set to 0', () => {
+        const result = element._getTodayTimestamp();
+        const date = new Date(result);
+        assert.equal(date.getMilliseconds(), 0);
       });
     });
 
