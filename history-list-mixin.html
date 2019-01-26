@@ -266,7 +266,7 @@ the License.
        * @return {Promise}
        */
       _loadPage() {
-        if (this.isSearch) {
+        if (this.isSearch || this.querying) {
           return Promise.resolve();
         }
         const e = this._dispatchListEvent();
@@ -405,11 +405,9 @@ the License.
         const days = [];
         const result = [];
         requests.forEach((item) => {
-          const info = this._computeHistoryTime(item.updated || item.created);
-          if (!info) {
-            return;
-          }
+          const info = this._computeHistoryTime(item.updated);
           item.timeLabel = info.timeLabel;
+          item.dayTime = info.time;
           let date = info.formatted;
           if (days.indexOf(date) === -1) {
             days[days.length] = date;
@@ -437,13 +435,7 @@ the License.
        * - timeLabel - secondary list item
        */
       _computeHistoryTime(date) {
-        if (!date) {
-          return;
-        }
         const d = new Date(date);
-        if (isNaN(d)) {
-          return;
-        }
         const formatted = new Intl.DateTimeFormat(undefined, {
           weekday: 'long',
           year: 'numeric',
@@ -462,6 +454,129 @@ the License.
           time,
           timeLabel
         };
+      }
+      /**
+       * Handles request model change when the type is history.
+       * @param {Object} request Changed request object.
+       */
+      _historyTypeChanged(request) {
+        const t = this.type;
+        if (t !== 'history') {
+          return;
+        }
+        if (['history', 'history-requests'].indexOf(request.type) === -1) {
+          return;
+        }
+        const requests = this.requests;
+        if (!requests) {
+          this._insertItem(request);
+          return;
+        }
+        const id = request._id;
+        for (let i = 0, len = requests.length; i < len; i++) {
+          if (requests[i]._id === id) {
+            this._removeItem(i);
+            break;
+          }
+        }
+        this._insertItem(request);
+      }
+      /**
+       * Removes history item at position.
+       * @param {Number} index Item's index in requests array
+       */
+      _removeItem(index) {
+        const old = this.requests[index];
+        const nextIndex = index + 1;
+        const next = this.requests[nextIndex];
+        if (old.hasHeader && next && !next.hasHeader) {
+          this.set(['requests', nextIndex, 'header'], old.header);
+          this.set(['requests', nextIndex, 'hasHeader'], old.hasHeader);
+          this.set(['requests', nextIndex, 'today'], old.today);
+        }
+        this.splice('requests', index, 1);
+      }
+      /**
+       * Adds a new history item to the list at a position where its `updated` or
+       * `created` time suggests.
+       * @param {Object} item History model to add.
+       */
+      _insertItem(item) {
+        const timeInfo = this._computeHistoryTime(item.updated || item.created);
+        if (!this.requests) {
+          this._appendHistoryTimeHeader(item, timeInfo, true);
+          this.set('requests', [item]);
+          return;
+        }
+        const index = this._historyInsertPosition(item.updated || item.created);
+        const next = this.get(`requests.${index}`);
+        if (next && next.hasHeader && next.dayTime === timeInfo.time) {
+          next.hasHeader = false;
+          next.today = false;
+          delete next.header;
+          this.set(`requests.${index}`, next);
+        }
+        let addHeader = true;
+        if (index > 0) {
+          const pIndex = index - 1;
+          const prev = this.get(`requests.${pIndex}`);
+          if (prev && prev.dayTime === timeInfo.time) {
+            addHeader = false;
+          }
+        }
+        this._appendHistoryTimeHeader(item, timeInfo, addHeader);
+        this.splice('requests', index, 0, item);
+      }
+      /**
+       * Determines a position of a history item to be inserted at.
+       * The position is determined by `time` argument.
+       * It always returns the position where the item to insert is newer than next item on the list.
+       * @param {Number} time Request's `updated` or `created` property,.
+       * @return {Number} Position at which insert the request.
+       */
+      _historyInsertPosition(time) {
+        const list = this.requests;
+        if (!list) {
+          return 0;
+        }
+        let i = 0;
+        let len = list.length;
+        for (; i < len; i++) {
+          const item = list[i];
+          if (item.updated) {
+            if (item.updated < time) {
+              return i;
+            }
+          } else if (item.created) {
+            if (item.created < time) {
+              return i;
+            }
+          }
+        }
+        return i;
+      }
+      /**
+       * Appends time properties to a history item.
+       * @param {Object} item History model
+       * @param {Object} timeInfo Generated time info object.
+       * @param {Boolean} addHeader True to set header values.
+       */
+      _appendHistoryTimeHeader(item, timeInfo, addHeader) {
+        item.timeLabel = timeInfo.timeLabel;
+        item.dayTime = timeInfo.time;
+        if (addHeader) {
+          let date = timeInfo.formatted;
+          let time = timeInfo.time;
+          const today = this._getTodayTimestamp();
+          if (time === today) {
+            item.today = true;
+            date = 'Today';
+          } else if (time === this._getYesterdayTimestamp(today)) {
+            date = 'Yesterday';
+          }
+          item.hasHeader = true;
+          item.header = date;
+        }
       }
       /**
        * Resets history object by removing items that has been added

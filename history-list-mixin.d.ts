@@ -221,6 +221,47 @@ declare namespace ArcComponents {
     _computeHistoryTime(date: Number|null): object|null;
 
     /**
+     * Handles request model change when the type is history.
+     *
+     * @param request Changed request object.
+     */
+    _historyTypeChanged(request: object|null): void;
+
+    /**
+     * Removes history item at position.
+     *
+     * @param index Item's index in requests array
+     */
+    _removeItem(index: Number|null): void;
+
+    /**
+     * Adds a new history item to the list at a position where its `updated` or
+     * `created` time suggests.
+     *
+     * @param item History model to add.
+     */
+    _insertItem(item: object|null): void;
+
+    /**
+     * Determines a position of a history item to be inserted at.
+     * The position is determined by `time` argument.
+     * It always returns the position where the item to insert is newer than next item on the list.
+     *
+     * @param time Request's `updated` or `created` property,.
+     * @returns Position at which insert the request.
+     */
+    _historyInsertPosition(time: Number|null): Number|null;
+
+    /**
+     * Appends time properties to a history item.
+     *
+     * @param item History model
+     * @param timeInfo Generated time info object.
+     * @param addHeader True to set header values.
+     */
+    _appendHistoryTimeHeader(item: object|null, timeInfo: object|null, addHeader: Boolean|null): void;
+
+    /**
      * Resets history object by removing items that has been added
      * when processing response.
      *

@@ -857,7 +857,7 @@
         element.notifyResize = () => called = true;
         element._loadPage()
         .then(() => {
-          Polymer.RenderStatus.afterNextRender(this, () => {
+          Polymer.RenderStatus.afterNextRender(element, () => {
             assert.isTrue(called);
             done();
           });
@@ -882,16 +882,6 @@
       let element;
       setup(function() {
         element = fixture('NoModel');
-      });
-
-      test('Returns undefined when no argument', () => {
-        const result = element._computeHistoryTime();
-        assert.isUndefined(result);
-      });
-
-      test('Returns undefined when argument is not parsable date', () => {
-        const result = element._computeHistoryTime('test');
-        assert.isUndefined(result);
       });
 
       test('Returns an object', () => {
@@ -1095,6 +1085,246 @@
         return p.then(() => {
           assert.isFalse(element.querying);
         });
+      });
+    });
+
+    suite('_historyTypeChanged()', () => {
+      let element;
+      setup(() => {
+        element = fixture('NoModel');
+        element.requests = DataGenerator.generateHistoryRequestsData({
+          requestsSize: 10
+        });
+      });
+      test('Do nothing when type is not set', () => {
+        element.type = undefined;
+        const item = DataGenerator.generateHistoryObject();
+        element._historyTypeChanged(item);
+        assert.lengthOf(element.requests, 10);
+      });
+
+      test('Do nothing when type is not history', () => {
+        element.type = 'saved';
+        const item = DataGenerator.generateHistoryObject();
+        element._historyTypeChanged(item);
+        assert.lengthOf(element.requests, 10);
+      });
+
+      test('Do nothing when request type is not history', () => {
+        const item = DataGenerator.generateSavedItem();
+        element._historyTypeChanged(item);
+        assert.lengthOf(element.requests, 10);
+      });
+
+      test('Creates requests array when request type is "history"', () => {
+        element.requests = undefined;
+        const item = DataGenerator.generateHistoryObject();
+        item.type = 'history';
+        element._historyTypeChanged(item);
+        assert.lengthOf(element.requests, 1);
+      });
+
+      test('Creates requests array when request type is "history-requests"', () => {
+        element.requests = undefined;
+        const item = DataGenerator.generateHistoryObject();
+        item.type = 'history-requests';
+        element._historyTypeChanged(item);
+        assert.lengthOf(element.requests, 1);
+      });
+
+      test('Calls _insertItem() when no requests', () => {
+        element.requests = undefined;
+        const item = DataGenerator.generateHistoryObject();
+        const spy = sinon.spy(element, '_insertItem');
+        element._historyTypeChanged(item);
+        assert.isTrue(spy.called, 'Function is called');
+        assert.deepEqual(spy.args[0][0], item, 'Argument is set');
+      });
+
+      test('Calls _insertItem() when request do not match current requests', () => {
+        const item = DataGenerator.generateHistoryObject();
+        const spy = sinon.spy(element, '_insertItem');
+        element._historyTypeChanged(item);
+        assert.isTrue(spy.called, 'Function is called');
+        assert.deepEqual(spy.args[0][0], item, 'Argument is set');
+      });
+
+      test('Calls _removeItem() when item already exist', () => {
+        const value = 'x-test: x-value';
+        const item = Object.assign({}, element.requests[2]);
+        item.headers = value;
+        const spy = sinon.spy(element, '_removeItem');
+        element._historyTypeChanged(item);
+        assert.isTrue(spy.called, 'Function is called');
+        assert.deepEqual(spy.args[0][0], 2, 'Argument is set');
+      });
+    });
+
+    suite('_removeItem()', () => {
+      let element;
+      setup(() => {
+        element = fixture('NoModel');
+        element.requests = DataGenerator.generateHistoryRequestsData({
+          requestsSize: 5
+        });
+      });
+
+      test('Removes request at position', () => {
+        const id = element.requests[1];
+        element._removeItem(1);
+        assert.lengthOf(element.requests, 4);
+        const item = element.requests.some((item) => item._id === id);
+        assert.isFalse(item);
+      });
+
+      test('Passes header to the next item', () => {
+        const current = element.requests[2];
+        current.hasHeader = true;
+        current.header = 'test-header';
+        current.today = true;
+        element._removeItem(2);
+        const next = element.requests[2];
+        assert.equal(next.header, 'test-header');
+        assert.isTrue(next.hasHeader);
+        assert.isTrue(next.today);
+      });
+
+      test('Ignores header set when next item has header', () => {
+        const current = element.requests[2];
+        current.hasHeader = true;
+        current.header = 'test-header';
+        current.today = true;
+        const next = element.requests[3];
+        next.hasHeader = true;
+        next.header = 'other-header';
+        next.today = false;
+        element._removeItem(2);
+        const updated = element.requests[2];
+        assert.equal(updated.header, 'other-header');
+        assert.isTrue(updated.hasHeader);
+        assert.isFalse(updated.today);
+      });
+    });
+
+    suite('_insertItem()', () => {
+      let element;
+      setup(() => {
+        element = fixture('NoModel');
+        element.requests = DataGenerator.generateHistoryRequestsData({
+          requestsSize: 2
+        });
+      });
+
+      test('Creates "requests" if not exists', () => {
+        element.requests = undefined;
+        const item = DataGenerator.generateHistoryObject();
+        element._insertItem(item);
+        assert.lengthOf(element.requests, 1);
+        assert.deepEqual(element.requests[0], item);
+      });
+
+      test('Calls _appendHistoryTimeHeader() when no requests', () => {
+        element.requests = undefined;
+        const item = DataGenerator.generateHistoryObject();
+        const spy = sinon.spy(element, '_appendHistoryTimeHeader');
+        element._insertItem(item);
+        assert.isTrue(spy.called, 'Method is called');
+        assert.deepEqual(spy.args[0][0], item, 'Passes item as an argument');
+        assert.typeOf(spy.args[0][1], 'object', 'Passes time info');
+        assert.isTrue(spy.args[0][2], 'AddHeader argument is set');
+      });
+
+      test('Calls _computeHistoryTime() with item\'s updated time', () => {
+        const item = DataGenerator.generateHistoryObject();
+        const time = item.updated;
+        const spy = sinon.spy(element, '_computeHistoryTime');
+        element._insertItem(item);
+        assert.isTrue(spy.called, 'Method is called');
+        assert.equal(spy.args[0][0], time, 'Passes "updated" as an argument');
+      });
+
+      test('Calls _computeHistoryTime() with item\'s created time', () => {
+        const item = DataGenerator.generateHistoryObject();
+        delete item.updated;
+        const time = item.created;
+        const spy = sinon.spy(element, '_computeHistoryTime');
+        element._insertItem(item);
+        assert.isTrue(spy.called, 'Method is called');
+        assert.equal(spy.args[0][0], time, 'Passes "updated" as an argument');
+      });
+
+      test('Calls _historyInsertPosition() with item\'s updated time', () => {
+        const item = DataGenerator.generateHistoryObject();
+        const time = item.updated;
+        const spy = sinon.spy(element, '_historyInsertPosition');
+        element._insertItem(item);
+        assert.isTrue(spy.called, 'Method is called');
+        assert.equal(spy.args[0][0], time, 'Passes "updated" as an argument');
+      });
+
+      test('Calls _historyInsertPosition() with item\'s created time', () => {
+        const item = DataGenerator.generateHistoryObject();
+        delete item.updated;
+        const time = item.created;
+        const spy = sinon.spy(element, '_historyInsertPosition');
+        element._insertItem(item);
+        assert.isTrue(spy.called, 'Method is called');
+        assert.equal(spy.args[0][0], time, 'Passes "updated" as an argument');
+      });
+
+      test('Removes header from next item when the same day', () => {
+        const item = DataGenerator.generateHistoryObject();
+        item.created = item.updated = Date.now();
+        const timeInfo = element._computeHistoryTime(item.updated);
+        const next = element.requests[0];
+        next.created = next.updated = item.created - 1;
+        next.hasHeader = true;
+        next.dayTime = timeInfo.time;
+        next.today = true;
+        next.header = 'test';
+        const id = next._id;
+        element._insertItem(item);
+        // next is now at index 1
+        const updated = element.requests[1];
+        assert.equal(updated._id, id, 'Inserted intem at position 0');
+        assert.isFalse(updated.hasHeader, 'Next item\'s hasHeader is false');
+        assert.isFalse(updated.today, 'Next item\'s today is false');
+        assert.isUndefined(updated.header, 'Next item\'s header is removed');
+      });
+
+      test('Next item stays the same if does not have header', () => {
+        const item = DataGenerator.generateHistoryObject();
+        item.created = item.updated = Date.now();
+        const next = element.requests[0];
+        next.created = next.updated = item.created - 1;
+        const id = next._id;
+        element._insertItem(item);
+        // next is now at index 1
+        const updated = element.requests[1];
+        assert.equal(updated._id, id, 'Inserted intem at position 0');
+        assert.isUndefined(updated.hasHeader, 'hasHeader is undefined');
+      });
+
+      test('Adds header to the item if previous item has no header', () => {
+        const item = DataGenerator.generateHistoryObject();
+        item.created = item.updated = Date.now();
+        element.requests[0].updated = item.created + 1;
+        element.requests[1].updated = item.created - 1;
+        element._insertItem(item);
+        assert.isTrue(item.hasHeader, 'hasHeader is set');
+        assert.equal(item.header, 'Today', 'header is set');
+        assert.isTrue(item.today, 'today is set');
+      });
+
+      test('Header is not added if previous item has the same date', () => {
+        const item = DataGenerator.generateHistoryObject();
+        item.created = item.updated = Date.now();
+        const timeInfo = element._computeHistoryTime(item.updated);
+        element.requests[0].updated = item.created + 1;
+        element.requests[0].dayTime = timeInfo.time;
+        element.requests[1].updated = item.created - 1;
+        element._insertItem(item);
+        assert.isUndefined(item.hasHeader, 'hasHeader is not set');
       });
     });
   });

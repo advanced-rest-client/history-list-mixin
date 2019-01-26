@@ -1,7 +1,7 @@
 {
   "name": "history-list-mixin",
   "description": "A mixin to be applied to a list that renders history requests.",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "license": "Apache-2.0",
   "main": "history-list-mixin.html",
   "keywords": [
