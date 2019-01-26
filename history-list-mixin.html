@@ -490,9 +490,9 @@ the License.
         const nextIndex = index + 1;
         const next = this.requests[nextIndex];
         if (old.hasHeader && next && !next.hasHeader) {
-          this.set(['requests', nextIndex, 'header'], old.header);
-          this.set(['requests', nextIndex, 'hasHeader'], old.hasHeader);
-          this.set(['requests', nextIndex, 'today'], old.today);
+          this.set(`requests.${index}.header`, old.header);
+          this.set(`requests.${index}.hasHeader`, old.hasHeader);
+          this.set(`requests.${index}.today`, old.today);
         }
         this.splice('requests', index, 1);
       }
@@ -511,10 +511,9 @@ the License.
         const index = this._historyInsertPosition(item.updated || item.created);
         const next = this.get(`requests.${index}`);
         if (next && next.hasHeader && next.dayTime === timeInfo.time) {
-          next.hasHeader = false;
-          next.today = false;
-          delete next.header;
-          this.set(`requests.${index}`, next);
+          this.set(`requests.${index}.hasHeader`, false);
+          this.set(`requests.${index}.today`, false);
+          this.set(`requests.${index}.header`, undefined);
         }
         let addHeader = true;
         if (index > 0) {
