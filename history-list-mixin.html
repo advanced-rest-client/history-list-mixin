@@ -490,9 +490,9 @@ the License.
         const nextIndex = index + 1;
         const next = this.requests[nextIndex];
         if (old.hasHeader && next && !next.hasHeader) {
-          this.set(`requests.${index}.header`, old.header);
-          this.set(`requests.${index}.hasHeader`, old.hasHeader);
-          this.set(`requests.${index}.today`, old.today);
+          this.set(`requests.${nextIndex}.header`, old.header);
+          this.set(`requests.${nextIndex}.hasHeader`, old.hasHeader);
+          this.set(`requests.${nextIndex}.today`, old.today);
         }
         this.splice('requests', index, 1);
       }
