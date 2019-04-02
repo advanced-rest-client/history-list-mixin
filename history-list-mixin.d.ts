@@ -5,18 +5,14 @@
  *   https://github.com/Polymer/tools/tree/master/packages/gen-typescript-declarations
  *
  * To modify these typings, edit the source file(s):
- *   history-list-mixin.html
+ *   history-list-mixin.js
  */
 
 
 // tslint:disable:variable-name Describing an API that's defined elsewhere.
 // tslint:disable:no-any describes the API as best we are able today
 
-/// <reference path="../polymer/types/lib/utils/mixin.d.ts" />
-/// <reference path="../polymer/types/lib/utils/render-status.d.ts" />
-
-declare namespace ApiElements {
-}
+export {HistoryListMixin};
 
 declare namespace ArcComponents {
 
@@ -289,3 +285,5 @@ declare namespace ArcComponents {
     _dispatchQueryEvent(q: String|null): CustomEvent|null;
   }
 }
+
+export {HistoryListMixinConstructor};
