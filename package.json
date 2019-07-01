@@ -1,20 +1,34 @@
 {
+  "name": "@advanced-rest-client/history-list-mixin",
   "description": "A mixin to be applied to a list that renders history requests.",
+  "version": "3.0.0-preview.1",
+  "license": "Apache-2.0",
+  "main": "history-list-mixin.js",
   "keywords": [
-    "api-components"
+    "api-components",
+    "arc",
+    "lists",
+    "history-list"
+  ],
+  "authors": [
+    "Pawel Psztyc",
+    "The Advanced REST client authors <arc@mulesoft.com>"
+  ],
+  "contributors": [
+    "Pawel Psztyc",
+    "The Advanced REST client authors <arc@mulesoft.com>"
   ],
   "repository": {
     "type": "git",
     "url": "git://github.com/advanced-rest-client/history-list-mixin.git"
   },
-  "name": "@advanced-rest-client/history-list-mixin",
-  "version": "3.0.0-preview.1",
-  "license": "Apache-2.0",
-  "main": "history-list-mixin.js",
-  "authors": [
-    "Pawel Psztyc",
-    "The Advanced REST client authors <arc@mulesoft.com>"
-  ],
+  "bugs": {
+    "url": "https://github.com/advanced-rest-client/history-list-mixin/issues",
+    "email": "arc@mulesoft.com"
+  },
+  "dependencies": {
+    "@polymer/polymer": "^3.2.0"
+  },
   "devDependencies": {
     "@advanced-rest-client/arc-data-generator": "^3.0.0-preview.1",
     "@advanced-rest-client/arc-models": "^3.0.0-preview.3",
@@ -34,16 +48,5 @@
     "test-sauce": "polymer test --module-resolution=node --npm --plugin sauce --job-name \"history-list-mixin:local-test\"",
     "test": "polymer test --module-resolution=node --npm --plugin local",
     "update-types": "gen-typescript-declarations --deleteExisting --outDir ."
-  },
-  "bugs": {
-    "url": "https://github.com/advanced-rest-client/history-list-mixin/issues",
-    "email": "arc@mulesoft.com"
-  },
-  "contributors": [
-    "Pawel Psztyc",
-    "The Advanced REST client authors <arc@mulesoft.com>"
-  ],
-  "dependencies": {
-    "@polymer/polymer": "^3.2.0"
   }
 }
