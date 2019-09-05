@@ -1,11 +1,10 @@
 {
   "name": "@advanced-rest-client/history-list-mixin",
   "description": "A mixin to be applied to a list that renders history requests.",
-  "version": "3.0.0-preview.1",
+  "version": "3.0.0",
   "license": "Apache-2.0",
   "main": "history-list-mixin.js",
   "keywords": [
-    "api-components",
     "arc",
     "lists",
     "history-list"
@@ -27,26 +26,44 @@
     "email": "arc@mulesoft.com"
   },
   "dependencies": {
-    "@polymer/polymer": "^3.2.0"
+    "@advanced-rest-client/arc-models": "^3.0.0-preview.7",
+    "lit-html": "^1.1.2"
   },
   "devDependencies": {
-    "@advanced-rest-client/arc-data-generator": "^3.0.0-preview.1",
-    "@advanced-rest-client/arc-models": "^3.0.0-preview.3",
-    "@polymer/gen-typescript-declarations": "^1.6.1",
-    "@polymer/iron-component-page": "^4.0.0",
-    "@polymer/iron-demo-helpers": "^3.0.0",
-    "@polymer/iron-test-helpers": "^3.0.0",
-    "@polymer/test-fixture": "^4.0.2",
-    "@webcomponents/webcomponentsjs": "^2.0.0",
-    "chai": "^4.2.0",
-    "mocha": "^5.2.0",
-    "sinon": "^7.2.3",
-    "wct-mocha": "^1.0.0"
+    "@advanced-rest-client/arc-data-generator": "^3.0.3",
+    "@advanced-rest-client/eslint-config": "^1.1.2",
+    "@advanced-rest-client/prettier-config": "^0.1.0",
+    "@advanced-rest-client/testing-karma-sl": "^1.0.4",
+    "@commitlint/cli": "^8.1.0",
+    "@commitlint/config-conventional": "^7.0.0",
+    "@open-wc/testing": "^2.3.3",
+    "@open-wc/testing-karma": "^3.1.29",
+    "@polymer/gen-typescript-declarations": "^1.6.2",
+    "@polymer/paper-toggle-button": "^3.0.1",
+    "husky": "^1.0.0",
+    "lint-staged": "^9.2.5",
+    "sinon": "^7.4.2",
+    "deepmerge": "^4.0.0",
+    "lit-element": "^2.2.1"
   },
   "scripts": {
-    "lint": "polymer lint history-list-mixin.html",
-    "test-sauce": "polymer test --module-resolution=node --npm --plugin sauce --job-name \"history-list-mixin:local-test\"",
-    "test": "polymer test --module-resolution=node --npm --plugin local",
-    "update-types": "gen-typescript-declarations --deleteExisting --outDir ."
+    "test": "karma start --coverage",
+    "update-types": "gen-typescript-declarations --deleteExisting --outDir .",
+    "lint:eslint": "eslint --ext .js,.html .",
+    "format:eslint": "eslint --ext .js,.html . --fix",
+    "lint:prettier": "prettier \"**/*.js\" --list-different || (echo '↑↑ these files are not prettier formatted ↑↑' && exit 1)",
+    "format:prettier": "prettier \"**/*.js\" --write",
+    "lint": "npm run lint:eslint && npm run lint:prettier",
+    "format": "npm run format:eslint && npm run format:prettier",
+    "test:watch": "karma start --auto-watch=true --single-run=false",
+    "test:legacy": "karma start --compatibility all --coverage",
+    "test:legacy:watch": "karma start --compatibility all --auto-watch=true --single-run=false",
+    "test:sl": "karma start karma.sl.config.js --compatibility all --coverage"
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix",
+      "git add"
+    ]
   }
 }
