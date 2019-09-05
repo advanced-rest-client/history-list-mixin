@@ -6,7 +6,7 @@
 
 # history-list-mixin
 
-A mixin to be applied to a list that renders history requests.
+A mixin to be applied to a list that renders history requests in Advanced REST Client.
 
 ### API components
 
@@ -19,34 +19,36 @@ This components is a part of [API components ecosystem](https://elements.advance
 npm install --save @advanced-rest-client/history-list-mixin
 ```
 
-### In a Polymer 3 element
+### In a LitElement
 
 ```js
-import {PolymerElement, html} from '@polymer/polymer';
-import {HistoryListMixin} from '@advanced-rest-client/history-list-mixin/history-list-mixin.js';
+import { LitElement, html } from 'lit-element';
+import { HistoryListMixin } from '@advanced-rest-client/history-list-mixin/history-list-mixin.js';
 
-class SampleElement extends HistoryListMixin(PolymerElement) {
+class SampleElement extends HistoryListMixin(LitElement) {
+  render() {
+    return html`
+    ${(this.requests || []).map((request) => html`...`)}
+    `;
+  }
 }
 customElements.define('sample-element', SampleElement);
 ```
 
-### Installation
+## Development
 
 ```sh
 git clone https://github.com/advanced-rest-client/history-list-mixin
-cd api-url-editor
+cd history-list-mixin
 npm install
-npm install -g polymer-cli
-```
-
-### Running the demo locally
-
-```sh
-polymer serve --npm
-open http://127.0.0.1:<port>/demo/
 ```
 
 ### Running the tests
+
 ```sh
-polymer test --npm
+npm test
 ```
+
+## API components
+
+This components is a part of [API components ecosystem](https://elements.advancedrestclient.com/)
