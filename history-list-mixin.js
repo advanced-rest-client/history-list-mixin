@@ -590,7 +590,7 @@ export const HistoryListMixin = (base) => class extends base {
       if (this.isSearch) {
         this.refresh();
       }
-      return Promise.resolve();
+      return;
     }
     this.isSearch = true;
     this._querying = true;
@@ -606,5 +606,15 @@ export const HistoryListMixin = (base) => class extends base {
       this._querying = false;
       this._handleError(e);
     }
+    // This helps prioritize search development
+    this.dispatchEvent(new CustomEvent('send-analytics', {
+      bubbles: true,
+      composed: true,
+      detail: {
+        type: 'event',
+        category: 'Content search',
+        action: 'History search'
+      }
+    }));
   }
 }
