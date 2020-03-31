@@ -834,6 +834,30 @@ describe('HistoryListMixin', function() {
       await element.query('test');
       assert.isFalse(element.querying);
     });
+
+    it('uses "detailedSearch" property', async () => {
+      const { requestModel } = element;
+      const spy = sinon.spy(requestModel, 'query');
+      element.detailedSearch = true;
+      await element.query('test');
+      assert.isTrue(spy.args[0][2], 'detailed argument is set');
+    });
+
+    it('calls model search with the passed term', async () => {
+      const { requestModel } = element;
+      const spy = sinon.spy(requestModel, 'query');
+      element.detailedSearch = true;
+      await element.query('test-query');
+      assert.equal(spy.args[0][0], 'test-query');
+    });
+
+    it('searches history store', async () => {
+      const { requestModel } = element;
+      const spy = sinon.spy(requestModel, 'query');
+      element.detailedSearch = true;
+      await element.query('test-query');
+      assert.equal(spy.args[0][1], 'history');
+    });
   });
 
   describe('_historyTypeChanged()', () => {

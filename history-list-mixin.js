@@ -49,7 +49,12 @@ export const HistoryListMixin = (base) => class extends base {
       /**
        * When set it won't query for data automatically when attached to the DOM.
        */
-      noAuto: { type: Boolean }
+      noAuto: { type: Boolean },
+
+      /**
+       * When set the datastore query is performed with `detailed` option
+       */
+      detailedSearch: { type: Boolean },
     };
   }
 
@@ -105,6 +110,7 @@ export const HistoryListMixin = (base) => class extends base {
     this._onDatabaseDestroy = this._onDatabaseDestroy.bind(this);
 
     this.pageLimit = 150;
+    this.detailedSearch = false;
   }
 
   connectedCallback() {
@@ -598,7 +604,7 @@ export const HistoryListMixin = (base) => class extends base {
 
     const model = this.requestModel;
     try {
-      let result = await model.query(query, 'history');
+      let result = await model.query(query, 'history', this.detailedSearch);
       result = this._processHistoryResults(result);
       this._appendItems(result);
       this._querying = false;
